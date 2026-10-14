@@ -201,7 +201,7 @@ def print_report(eval_result: dict) -> None:
             print(f"  Status: {r['detail']}")
 
     print(f"\n{'=' * 85}")
-    print(f"EVALUATION SUMMARY")
+    print("EVALUATION SUMMARY")
     print(f"{'=' * 85}")
     print(f"Total Benchmark Cases:  {eval_result['total']}")
     print(f"Verdict Accuracy:       {eval_result['verdict_accuracy']:.2%} ({eval_result['verdict_correct']}/{eval_result['total']})")

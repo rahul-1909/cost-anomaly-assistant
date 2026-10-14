@@ -2,6 +2,10 @@
 
 A Python pipeline that computes weekly freight-cost metrics, flags route-week anomalies, and matches flagged rows to contextual notes using note retrieval plus deterministic evidence checks.
 
+## Python support
+
+Tested with Python 3.14.7. The minimum supported version is Python 3.12, the minimum required by the pinned NumPy dependency.
+
 ## How it works
 
 1. `src/loading.py` validates and loads `shipment_records.csv`, `context_notes.csv`, and `config.yaml`. Shipment dates are assigned to Monday-starting calendar weeks.
@@ -29,7 +33,7 @@ The selected note must apply to the route (or say `All Routes`), overlap the fla
 
 When multiple notes qualify, the pipeline prefers a route-specific note, then the most recent date, then the alphabetically first note ID. Explanations are deterministic templates that cite the selected note. An unexplained row has a blank `matched_note_id`; a rejected note may be described in the reason but is not recorded as matched evidence.
 
-There are only 10 notes in this case-study corpus, so semantic retrieval is a small-corpus candidate-ranking step rather than evidence of broad production search quality. The FAISS rank audit puts all eight gold notes for the justified output rows in positions 1–3, so `rag_top_k` is 5 for this supplied dataset; this small audit says nothing about recall on a larger or new corpus. Deterministic Python rules check retrieved notes for route, time-window, and cost-increase validity; those rules decide the verdict, and fixed Python templates produce the reason. If the embedding model cannot load, the pipeline logs a warning and uses deterministic lexical ranking; the regression test confirms identical output for this dataset. No LLM call can change a verdict or invent a reason.
+There are only 10 notes in this case-study corpus, so semantic retrieval is a small-corpus candidate-ranking step rather than evidence of broad production search quality. The FAISS rank audit puts the cited notes for all eight justified output rows in positions 1–3, so `rag_top_k` is 5 for this supplied dataset; this small audit says nothing about recall on a larger or new corpus. Deterministic Python rules check retrieved notes for route, time-window, and cost-increase validity; those rules decide the verdict, and fixed Python templates produce the reason. If the embedding model cannot load, the pipeline logs a warning and uses deterministic lexical ranking; the regression test confirms identical output for this dataset. No LLM call can change a verdict or invent a reason.
 
 ## Data and how it was built
 
@@ -56,6 +60,41 @@ python repro_check.py
 ```
 
 The pytest suite covers week assignment, aggregate cost calculations, strict prior-week baselines, peer self-exclusion, configured threshold boundaries, route-type consistency, note route/date/cost-direction rules, output column order and inferred types, and the hardcoded justified-row oracle. The independent baseline script recomputes five selected route-week metrics from the raw CSV using Python's standard library. Its last-eight-observed baseline equals the eight-calendar-week window for this dataset because no route-weeks are missing. `eval/eval_verdicts.py` is a fixed regression benchmark for verdict and note matching, not an independent label set. The reproducibility script runs the pipeline three times, compares output hashes, writes the report to `repro_check.txt`, and removes temporary `run1.csv`, `run2.csv`, and `run3.csv` files. `retrieval_rank_audit.py` reports each justified row's gold-note position in the FAISS results.
+
+## Repository layout
+
+- `.gitignore` — excludes secrets, virtual environments, and generated caches.
+- `FreightTiger_Intern_CaseStudy.pdf` — case-study brief already included in the repository.
+- `README.md` — usage, methodology, verification, and limitations.
+- `ask.py` — optional plain-English query CLI.
+- `config.yaml` — metric, flagging, model, and output settings.
+- `context_notes.csv` — contextual notes used to explain eligible anomalies.
+- `cost_log.md` — LLM token and cost accounting for a pipeline run.
+- `eval/` — regression benchmark directory.
+- `eval/eval_verdicts.py` — fixed verdict and note-matching regression benchmark.
+- `main.py` — root-level pipeline entry point that writes `output.csv`.
+- `output.csv` — generated route-week results.
+- `repro_check.py` — three-run SHA-256 reproducibility check.
+- `repro_check.txt` — latest saved reproducibility report.
+- `requirements.txt` — pinned Python dependencies.
+- `retrieval_rank_audit.py` — gold-note rank audit for justified output rows.
+- `sample_output_format_v2.csv` — output schema and formatting contract.
+- `shipment_records.csv` — shipment-level input data.
+- `src/` — pipeline implementation package.
+- `src/__init__.py` — source package marker.
+- `src/cli.py` — optional plain-English query implementation.
+- `src/explain.py` — deterministic reason templates.
+- `src/flagging.py` — deterministic anomaly flag rules.
+- `src/loading.py` — input and configuration validation.
+- `src/metrics.py` — weekly costs and own-history/peer comparisons.
+- `src/retrieval.py` — note retrieval and deterministic eligibility checks.
+- `tests/` — automated test suite.
+- `tests/__init__.py` — test package marker.
+- `tests/test_core.py` — unit tests for metrics, flagging, and note rules.
+- `tests/test_independent_baselines.py` — independent raw-data metric checks.
+- `tests/test_justified_oracle.py` — justified route-week-note oracle checks.
+- `tests/test_output_contract.py` — output schema and note-evidence checks.
+- `tests/test_retrieval_fallback.py` — deterministic retrieval fallback checks.
 
 ## Running options
 
@@ -86,5 +125,5 @@ python ask.py
 - The note interval parser recognizes explicit month/day ranges, common numeric or written durations in days, weeks, or months, and the phrases `this week`, `festival week`, and `this quarter`. Other temporal wording falls back to the note's calendar week and may need an explicit parser rule for broader data.
 - The reason templates cover the supplied note patterns. New note wording may need additional cost-direction or reason-template rules.
 - The evaluation scenarios are a small fixed benchmark and do not measure the quality of semantic search over a broad production corpus.
-- The pinned embedding model must be downloaded once or already present in the local Hugging Face cache. A first run without the cached model requires Hugging Face access.
+- FAISS retrieval and the rank-audit script require the pinned embedding model to be available locally or downloadable from Hugging Face. The main pipeline logs a warning and switches to deterministic lexical ranking when model loading fails.
 - The pipeline reports statistical deviations, not confirmed fraud or proof of causation. Human review is required for operational decisions.

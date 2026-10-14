@@ -72,7 +72,7 @@ def main():
         "=" * 80,
         f"Timestamp:              {datetime.now().isoformat()}",
         f"Python Version:         {sys.version.split()[0]}",
-        f"Total Pipeline Runs:    3 untouched runs on shipment_records.csv",
+        "Total Pipeline Runs:    3 untouched runs on shipment_records.csv",
         "",
         "RUN CHECKSUMS (SHA-256):",
         f"  Run 1: {h1} ({run_paths[0].name})",
