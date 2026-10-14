@@ -1,228 +1,85 @@
-# FreightTiger Smart Assistant: Shipping Cost Anomaly Detection
+# FreightTiger Cost Anomaly Assistant
 
-A deterministic shipping-cost anomaly monitor with semantic note retrieval and evidence-based explanations.
+A Python pipeline that computes weekly freight-cost metrics, flags route-week anomalies, and matches flagged rows to contextual notes using semantic retrieval plus deterministic evidence checks.
 
----
+## How it works
 
-## 1. System Architecture
+1. `src/loading.py` validates and loads `shipment_records.csv`, `context_notes.csv`, and `config.yaml`. Shipment dates are assigned to Monday-starting calendar weeks.
+2. `src/metrics.py` aggregates cost and tonne-kilometres for each route-week, then calculates the own-history and same-week peer comparisons.
+3. `src/flagging.py` flags a route-week when its cost is rising versus its own history and exceeds either configured anomaly threshold. Every route-week in the supplied data has 3–5 shipments.
+4. `src/retrieval.py` embeds the context notes with the pinned Sentence Transformers model and searches a FAISS index. Python rules then require route applicability, a matching note-text date/duration interval, and language indicating a cost increase. The rules reject future notes and negative or neutral statements.
+5. `src/explain.py` writes fixed reason templates from the accepted note facts. No LLM is called and no model-generated text can change a verdict or reason.
 
-The solution uses a hybrid deterministic-AI architecture designed to eliminate hallucinations while maintaining plain-English explainability:
+The pipeline is run from the repository root with `python main.py`. It writes `output.csv` using the contract in `sample_output_format_v2.csv`.
 
-1. **Ingestion & Validation Layer (`src/loading.py`)**:
-   - Ingests `shipment_records.csv` and `context_notes.csv`.
-   - Validates required columns and shipment nulls, rejects duplicate shipment IDs and non-positive shipment quantities, distances, or costs, and parses shipment and note dates.
-   - Derives route identifiers (`Origin-Destination`) and aligns each shipment to its canonical calendar week (`week_of` = Monday).
+## Metric and baseline definitions
 
-2. **Deterministic Metric Engine (`src/metrics.py`)**:
-   - Aggregates shipments by route and week.
-   - Calculates weekly freight cost per tonne-kilometre:
-     $$\text{cost\_per\_tonne\_km} = \frac{\sum \text{freight\_cost\_inr}}{\sum (\text{quantity\_tonnes} \times \text{distance\_km})}$$
-   - Computes rolling 8-week historical baselines strictly prior to the current week without look-ahead.
-   - Computes peer baselines across contemporaneous routes within the same length classification (`route_type`).
+- **Route**: a unique `(origin, destination)` pair, associated with its supplied `route_type`.
+- **Week**: Monday through Sunday. `week_of` is the Monday date in `YYYY-MM-DD` form.
+- **Weekly cost per tonne-kilometre**: `sum(freight_cost_inr) / sum(quantity_tonnes * distance_km)`, aggregated at the route-week level before division. Per-shipment ratios are not averaged.
+- **Own-history comparison**: the arithmetic mean of the route's observations in the strictly prior eight calendar weeks, from `week_of - 8 weeks` up to but excluding `week_of`. Available observations are used when fewer than eight are present; missing calendar weeks are not backfilled. With no prior observation, the comparison is blank.
+- **Peer comparison**: the unweighted mean cost for other routes of the same `route_type` in the same week. The route itself is excluded. In this dataset, Short and Long each have two routes, so each has a single peer; Medium has three routes.
+- **Flag rule**: own-history change must be greater than 0%, and either the own-history change must be greater than 5% or the peer change must be greater than 15%. These are strict greater-than comparisons.
 
-3. **Deterministic Flagging Module (`src/flagging.py`)**:
-   - Applies transparent, mathematically grounded threshold logic to identify candidate anomalies.
-   - Marks route-weeks for review when the own-history percentage is positive, exceeds the configured own-history threshold or peer threshold, and shipment count meets the configured minimum.
+## Note matching and reason safety
 
-4. **Vector Retrieval & Note Guardrail Layer (`src/retrieval.py`)**:
-   - Indexes `context_notes.csv` into a FAISS index using `sentence-transformers/all-MiniLM-L6-v2`.
-   - Executes semantic retrieval for candidate notes using query embeddings constructed from route, timeline, and cost delta.
-   - Applies deterministic code-level filtration: geographical match, temporal window validity (no future notes), and explicit cost-increase validation (rejecting negative/neutral controls).
-   - Resolves conflicts using a deterministic tie-breaking protocol.
+The selected note must apply to the route (or say `All Routes`), overlap the flagged week according to the dates or duration in its text, and describe a cost increase. A note dated after the flagged week's Sunday is rejected. Explicit date ranges such as `from Feb 24 to Mar 8`, stated durations such as `for about a week`, and phrases such as `this week`, `festival week`, and `this quarter` define the note interval. When no date range or duration is stated, applicability is limited to the calendar week containing the note date. The pipeline does not apply a generic multi-week effect window.
 
-5. **Explanation & Verification Layer (`src/explain.py`)**:
-   - Generates deterministic explanations for justified anomalies that cite the matched note ID and date.
-   - Uses fixed templates so explanation text cannot add claims beyond the note facts selected by deterministic rules.
-   - For unexplained anomalies, reports that no supporting note was found or cites a nearby rejected negative-control note.
+When multiple notes qualify, the pipeline prefers a route-specific note, then the most recent date, then the alphabetically first note ID. Explanations are deterministic templates that cite the selected note. An unexplained row has a blank `matched_note_id`; a rejected note may be described in the reason but is not recorded as matched evidence.
 
-6. **Interactive Assistant CLI (`src/cli.py`, `ask.py`)**:
-   - Provides a plain-English query interface enabling users to inspect cost anomalies by corridor and time period.
+## Data and how it was built
 
----
+The supplied shipment file contains 2,940 records, seven routes, and 728 route-weeks from 2024-01-01 through 2025-12-28. Each route-week has 3–5 shipments. The notes file contains 10 contextual notes, including three cost-increase notes and seven negative controls.
 
-## 2. Metric & Baseline Definitions
+The implementation uses Python, pandas, NumPy, PyYAML, Sentence Transformers, and FAISS. Dependencies are pinned in `requirements.txt`; the embedding model revision is pinned in `config.yaml`. Metric, flag, and reason decisions are implemented in Python. There are no API credentials or external LLM calls required.
 
-All metric formulas and baseline calculations adhere to the exact specification provided in the case study brief:
+## Verification
 
-- **Route Grouping**: A route is defined by unique `(origin, destination)` pairs and associated with its provided `route_type` (Short, Medium, Long). There is a one-to-one mapping between each origin-destination pair and its length bucket.
-- **Weekly Alignment (`week_of`)**: Shipment dates are mapped to standard Monday-to-Sunday weeks. `week_of` represents the date of the Monday of that week (ISO format `YYYY-MM-DD`).
-- **Cost Metric (`cost_per_tonne_km`)**:
-  - Total freight expenditure divided by total tonne-kilometres delivered in that week:
-    $$\text{cost\_per\_tonne\_km} = \frac{\sum_{i} \text{freight\_cost\_inr}_i}{\sum_{i} (\text{quantity\_tonnes}_i \times \text{distance\_km}_i)}$$
-  - Aggregation is performed at the route-week level before division. Per-shipment unit cost ratios are never averaged together, avoiding distortion from varying shipment weights and trip lengths.
-- **Comparison Baseline: `vs_own_history`**:
-  - Trailing 8-week rolling arithmetic mean of the route's `cost_per_tonne_km`.
-  - Calculated strictly over prior weeks ($t-8$ through $t-1$). Current and future weeks are excluded from the baseline.
-  - **Handling of fewer than 8 prior weeks**: If fewer than 8 prior weeks are available, the baseline uses all available prior weeks ($1 \le k < 8$). No padding, backfilling, or extrapolation is applied.
-  - **Initial week handling**: If zero prior weeks exist (Week 1 of the dataset), `vs_own_history` is left blank (`NaN` / empty string).
-  - Formatted as signed percentage: `+X.X% vs this route's past average`.
-- **Comparison Baseline: `vs_similar_routes`**:
-  - Unweighted arithmetic mean of `cost_per_tonne_km` during the exact same week across all other routes sharing the same `route_type`.
-  - The route itself is strictly excluded from its own peer average calculation.
-  - Formatted as signed percentage: `+X.X% vs similar-length routes this week`.
-
----
-
-## 3. Flagging Rule & Threshold Justification
-
-A route-week is flagged as anomalous if and only if:
-1. `vs_own_history_pct > 0` (cost is rising compared to historical trajectory), AND
-2. The escalation is outside normal variation versus its own history OR versus peers:
-   $$\text{vs\_own\_history\_pct} \ge 5.0\% \quad \text{OR} \quad \text{vs\_similar\_routes\_pct} \ge 15.0\%$$
-3. Shipment volume meets the minimum threshold (`shipment_count >= 1`).
-
-### Empirical Justification from Data Distribution
-
-Analysis of the 721 route-weeks with an own-history baseline and all 728 peer comparisons across 2024-2025 yields the following distribution parameters:
-
-| Distribution Metric | `vs_own_history` (%) | `vs_similar_routes` (%) |
-|---|---|---|
-| Mean | +0.42% | +0.36% |
-| Standard Deviation ($\sigma$) | 4.25% | 8.98% |
-| 50th Percentile (Median) | +0.22% | -0.38% |
-| 75th Percentile | +2.61% | +5.85% |
-| 90th Percentile | +4.48% | +10.55% |
-| 95th Percentile | +5.75% | +13.43% |
-| 98th Percentile | +7.50% | +22.68% |
-| Maximum | +35.52% | +38.91% |
-
-- **Own History Threshold (5.0%)**: Represents ~1.1 standard deviations above the historical mean and is near the 93rd percentile of valid own-history movements. Setting this threshold at 5.0% ensures detection of:
-  - Nationwide diesel price increases (+5% to +7%) documented in note N003.
-  - Regional weather disruptions, such as Chennai-Bangalore flooding in N001 (+31.5% on 2025-02-24 and +22.8% on 2025-03-03 versus own history in this run).
-  - Corridors experiencing surcharge surges (+29.5%) like Ahmedabad-Mumbai festival week in note N002.
-  - Severe unexplained anomalies like Delhi-Jaipur (+35.5%) and Mumbai-Pune (+9.2%).
-- **Peer Threshold (15.0%)**: Represents the 96th percentile of peer divergence, identifying routes that deviate markedly from contemporaneous routes of identical length class.
-- **Low-Volume Guard**: The supplied data has 3 to 5 shipments in each route-week; no artificial volume padding is necessary.
-
----
-
-## 4. Anti-Hallucination Architecture
-
-The assistant uses deterministic evidence checks for every note used to justify a flagged route-week:
-
-1. **Deterministic Verdict Decision**:
-   - Verdict decisions are executed exclusively by Python rules.
-   - A candidate note is accepted as supporting evidence if and only if all three deterministic conditions hold:
-     - **Rule A (Geography)**: `applies_to` matches the corridor or specifies "All Routes".
-     - **Rule B (Timeline)**: The note date falls within the applicable lookback window and does not occur after the week's end (no future knowledge). The effect window is bounded at 14 days.
-     - **Rule C (Cost Direction)**: The note explicitly reports factors causing cost increases. Notes stating that costs were unaffected, normal, or absorbed without rate changes are explicitly rejected.
-2. **Deterministic Tie-Breaking**:
-   - If multiple notes qualify, the system deterministically selects the most route-specific note, followed by the most recent note date, followed by alphabetical note ID.
-3. **Deterministic Reasons**:
-   - Reasons use fixed templates and the note text/date selected by the rules; the pipeline does not accept LLM-generated prose.
-4. **Negative Control Rejection Reporting**:
-   - When a note is retrieved in proximity to a flagged week but rejected because it describes stable or normal conditions (e.g. N006 on Mumbai-Pune), the assistant cites the rejected note to document why the rise remains unexplained.
-
----
-
-## 5. Data Inspection Findings
-
-Inspection of the primary data files revealed the following characteristics:
-
-- **`shipment_records.csv`**:
-  - Total records: 2,940 shipments across 7 distinct corridors.
-  - Missing values / nulls: 0 across all columns.
-  - Duplicate `shipment_id`: 0.
-  - Negative or zero quantities/distances/costs: 0.
-  - Temporal range: 2024-01-01 to 2025-12-28 (104 continuous weeks per route).
-  - Corridors: Ahmedabad-Mumbai (Medium), Chennai-Bangalore (Medium), Delhi-Chennai (Long), Delhi-Jaipur (Short), Kolkata-Bhubaneswar (Medium), Mumbai-Delhi (Long), Mumbai-Pune (Short).
-  - Each corridor consistently maps to exactly one `route_type`.
-- **`context_notes.csv`**:
-  - Total notes: 10 entries.
-  - 3 notes report cost-increasing events: N001 (Chennai-Bangalore flood), N002 (Ahmedabad-Mumbai festival surcharge), N003 (Nationwide diesel price hike).
-  - 7 notes serve as negative controls reporting normal conditions, non-applicable routes, or absorbed compliance costs (N004, N005, N006, N007, N008, N009, N010).
-- **`sample_output_format_v2.csv`**:
-  - Specifies contract for 8 columns: `route,week_of,cost_per_tonne_km,vs_own_history,vs_similar_routes,flagged,matched_note_id,reason`.
-  - Requires signed percentage formatting with exact phrasing.
-
----
-
-## 6. Verification and Correctness
-
-System correctness was validated across four independent test harnesses:
-
-1. **Unit Test Suite (`tests/test_core.py`)**:
-   - Tests cover week assignment across year boundaries, Monday-Sunday mappings, aggregate versus ratio calculations, trailing calendar lookback windows, self-exclusion from peer averages, percentage formatting, and note-matching filters.
-   - Run `pytest -q` from `AI Intern Case Study` for the current result.
-2. **Independent Baseline Recomputation (`tests/test_independent_baselines.py`)**:
-   - Checks 5 selected route-weeks across different routes and years.
-   - Recomputes unit costs, lookbacks, peer averages, and percentage deltas from raw CSV lines using pure Python dictionary and list operations (completely independent of pandas).
-   - Run `python tests/test_independent_baselines.py` from `AI Intern Case Study` to verify the selected rows against the current output.
-3. **Benchmark Evaluation Harness (`eval/eval_verdicts.py`)**:
-   - Checks verdict and note-ID matching across 11 hand-labeled scenarios including positive justifications, nationwide price rises, negative controls, and sample output rows. It does not assert numeric comparison percentages.
-   - Run `python eval/eval_verdicts.py` from `AI Intern Case Study` to print verdict and note-matching accuracy.
-4. **Three-Run Reproducibility Verification (`repro_check.py`)**:
-   - Executes the complete pipeline three consecutive times on the raw input data.
-   - Computes SHA-256 hashes of generated output files and performs line-by-line diffs.
-   - Run `python repro_check.py` from `AI Intern Case Study` to regenerate the report and compare three fresh output hashes.
-
----
-
-## 7. How to Run
-
-### Prerequisites
-
-Python 3.11+ (tested on Python 3.14). Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-### 1. Execute Primary Pipeline
-
-Generates `AI Intern Case Study/output.csv` matching `AI Intern Case Study/sample_output_format_v2.csv`:
+Run the pipeline first so the tests and evaluation use a freshly generated `output.csv`:
 
 ```bash
 python main.py
 ```
 
-Options:
-- `--no-llm`: Compatibility option; reasons use deterministic templates either way.
-- `--config custom_config.yaml`: Supply an alternative configuration file.
-- `--output custom_output.csv`: Specify destination CSV file.
-
-### 2. Run Test Suites
+Then run the checks from the repository root:
 
 ```bash
-cd "AI Intern Case Study"
-pytest -q
+python -m pytest -q
 python tests/test_independent_baselines.py
-```
-
-### 3. Run Benchmark Evaluation
-
-```bash
-cd "AI Intern Case Study"
 python eval/eval_verdicts.py
-```
-
-### 4. Verify Three-Run Reproducibility
-
-```bash
-cd "AI Intern Case Study"
 python repro_check.py
 ```
 
-### 5. Query Plain-English CLI Assistant (`ask.py`)
+The unit tests cover week assignment, aggregate cost calculations, strict prior-week baselines, peer self-exclusion, thresholds, note route/date/cost-direction rules, output column order and inferred types, and cited-note validity for every justified row. The independent baseline script recomputes selected route-week values from the raw CSV using Python's standard library. The evaluation script reports verdict and note-matching accuracy on its labeled scenarios. The reproducibility script runs the pipeline three times, compares output hashes, writes the report to `repro_check.txt`, and removes temporary `run1.csv`, `run2.csv`, and `run3.csv` files.
+
+## Running options
+
+Install the pinned dependencies and run from the repository root:
 
 ```bash
-# Direct question
+python -m pip install -r requirements.txt
+python main.py
+```
+
+Optional pipeline arguments:
+
+```bash
+python main.py --config custom_config.yaml
+python main.py --output custom_output.csv
+```
+
+The plain-English query tool can also be run from the repository root:
+
+```bash
 python ask.py "why did route Ahmedabad-Mumbai get pricier in January 2025?"
-
-# Negative finding check
-python ask.py "why did route Mumbai-Delhi get pricier in July 2024?"
-
-# Interactive console mode
 python ask.py
 ```
 
----
+## Known limitations
 
-## 8. Known Limitations & Trade-offs
-
-1. **Fixed Temporal Windows for Disruption Events**:
-   - External disruptions vary in duration. The system uses a 14-day effect window from the note date. While this accurately models the flood and festival notes in this dataset, real-world deployments would benefit from explicit `event_end_date` metadata in note schemas.
-2. **Unweighted Peer Averaging**:
-   - Per the brief specification, `vs_similar_routes` is calculated as an unweighted average of route unit costs. Weighting by route volume would be a natural extension for production environments.
-3. **No generated explanation wording**:
-   - Explanations are deterministic templates. A future LLM explanation layer would need stronger claim validation before its text could be included in output.
+- Short and Long route types each have only two routes, so each peer average is based on a single other route. Medium route peer averages use two other routes.
+- The note interval parser recognizes explicit month/day ranges, common numeric or written durations in days, weeks, or months, and the phrases `this week`, `festival week`, and `this quarter`. Other temporal wording falls back to the note's calendar week and may need an explicit parser rule for broader data.
+- The reason templates cover the supplied note patterns. New note wording may need additional cost-direction or reason-template rules.
+- The evaluation scenarios are a small fixed benchmark and do not measure the quality of semantic search over a broad production corpus.
+- The pinned embedding model must be downloaded once or already present in the local Hugging Face cache. A first run without the cached model requires Hugging Face access.
+- The pipeline reports statistical deviations, not confirmed fraud or proof of causation. Human review is required for operational decisions.

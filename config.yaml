@@ -41,32 +41,15 @@ flag_own_history_rising_threshold: 0.0    # Must be strictly above 0% (rising)
 flag_own_history_outlier_threshold: 5.0   # Percentage above own history (92nd percentile)
 flag_peer_outlier_threshold: 15.0         # Percentage above peers (96th percentile)
 
-# Minimum number of shipments in a week to consider for flagging.
-# With 2940 shipments / 728 route-weeks ~ 4 shipments per route-week on average,
-# we set a minimum of 1 shipment.
-min_shipments_for_flag: 1
-
 # --- RAG / Note matching ---
 # Embedding model for context notes
 embedding_model: "all-MiniLM-L6-v2"
+# Pin the Hub model snapshot so a future upstream update cannot change retrieval.
+embedding_model_revision: "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
 # Number of candidate notes to retrieve from vector search (search all available notes)
 rag_top_k: 10
-# Maximum number of days BEFORE the flagged week's Monday that a note can apply.
-# Notes dated after the flagged week's Sunday are rejected.
-note_lookback_days: 30
-# A note's effect window: from note date to note date + this many days.
-# 14 days (2 weeks) covers standard temporary surcharges, flood disruptions (Feb 24 - Mar 8),
-# and nationwide price shifts, while preventing lingering false justifications
-# once roads reopen (e.g., Chennai-Bangalore passable Mar 9, confirmed normal Mar 17).
-note_effect_window_days: 14
-
-# --- LLM settings ---
-# Using Google Gemini free tier (gemini-2.0-flash) with local disk cache and deterministic fallback
-llm_provider: "gemini"
-llm_model: "gemini-2.0-flash"
-llm_temperature: 0
-# Cache directory for LLM responses (keyed by prompt hash)
-llm_cache_dir: "llm_cache"
+# Note applicability is derived from event dates/durations in the note text.
+# Undated durations fall back conservatively to the note's calendar week.
 
 # --- Output formatting ---
 # cost_per_tonne_km rounded to 2 decimal places

@@ -1,7 +1,7 @@
 """
 test_independent_baselines.py -- Verification by independent baseline recomputation.
 
-Selects 5 random route-weeks and independently recomputes:
+Selects 5 route-weeks and independently recomputes:
   1. Weekly cost_per_tonne_km (pure python dictionary aggregation, no pandas)
   2. Trailing 8-week average (manual list slicing strictly prior to current week)
   3. Peer average (manual loop across other routes of same route_type)
@@ -11,7 +11,6 @@ Asserts that all recomputed values match the pipeline's output.csv.
 """
 
 import csv
-import random
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -104,7 +103,7 @@ def recompute_baselines_independently(shipment_csv: Path, target_route: str, tar
 
 
 def test_independent_baseline_verification():
-    """Select 5 random route-weeks and verify exact match with pipeline output."""
+    """Select 5 route-weeks and verify exact match with pipeline output."""
     output_path = PROJECT_ROOT / "output.csv"
     shipment_path = PROJECT_ROOT / "shipment_records.csv"
 
@@ -112,7 +111,6 @@ def test_independent_baseline_verification():
     output_df = pd.read_csv(output_path)
 
     # Pick 5 diverse random route-weeks across different routes and years
-    random.seed(999)
     sample_indices = [
         42,   # Ahmedabad-Mumbai mid 2024
         185,  # Chennai-Bangalore mid 2025

@@ -366,32 +366,31 @@ class TestFlagging:
             "flag_own_history_rising_threshold": 0.0,
             "flag_own_history_outlier_threshold": 15.0,
             "flag_peer_outlier_threshold": 15.0,
-            "min_shipments_for_flag": 1,
         }
 
     def test_rising_and_outlier_flags(self):
         """Rising above 15% own history should flag."""
-        assert should_flag(20.0, 10.0, 5, self._default_config()) is True
+        assert should_flag(20.0, 10.0, self._default_config()) is True
 
     def test_rising_but_below_threshold_no_flag(self):
         """Rising but below both thresholds should not flag."""
-        assert should_flag(5.0, 5.0, 5, self._default_config()) is False
+        assert should_flag(5.0, 5.0, self._default_config()) is False
 
     def test_declining_no_flag(self):
         """Declining cost should never flag."""
-        assert should_flag(-10.0, 25.0, 5, self._default_config()) is False
+        assert should_flag(-10.0, 25.0, self._default_config()) is False
 
     def test_no_history_no_flag(self):
         """No own history should not flag."""
-        assert should_flag(None, 25.0, 5, self._default_config()) is False
+        assert should_flag(None, 25.0, self._default_config()) is False
 
     def test_peer_outlier_flags(self):
         """Below own history threshold but above peer threshold should flag."""
-        assert should_flag(10.0, 20.0, 5, self._default_config()) is True
+        assert should_flag(10.0, 20.0, self._default_config()) is True
 
     def test_nan_history_no_flag(self):
         """NaN own history should not flag."""
-        assert should_flag(float("nan"), 25.0, 5, self._default_config()) is False
+        assert should_flag(float("nan"), 25.0, self._default_config()) is False
 
 
 # ============================================================
@@ -414,17 +413,11 @@ class TestNoteMatching:
         """A note for one route must not match a different route."""
         assert note_applies_to_route("Delhi-Jaipur", "Chennai-Bangalore") is False
 
-    def test_date_in_window(self):
-        """A note within the effect window should match."""
+    def test_note_without_duration_applies_only_to_its_calendar_week(self):
         note_date = pd.Timestamp("2025-02-24")
         week_monday = pd.Timestamp("2025-02-24")
         assert note_date_applies_to_week(note_date, week_monday) is True
-
-    def test_date_too_old(self):
-        """A note more than 30 days before the week should not match."""
-        note_date = pd.Timestamp("2024-01-01")
-        week_monday = pd.Timestamp("2025-01-01")
-        assert note_date_applies_to_week(note_date, week_monday) is False
+        assert note_date_applies_to_week(note_date, pd.Timestamp("2025-03-03")) is False
 
     def test_date_in_future(self):
         """A note dated after the week's Sunday should not match."""
@@ -433,19 +426,46 @@ class TestNoteMatching:
         # Sunday is Mar 2, note is Mar 10 -- after Sunday
         assert note_date_applies_to_week(note_date, week_monday) is False
 
-    def test_date_effect_window_covers_week(self):
-        """A note from a few weeks before should still match via effect window."""
-        note_date = pd.Timestamp("2025-02-24")
-        week_monday = pd.Timestamp("2025-03-03")  # 7 days after note
-        # Effect window is 21 days, so note effect runs Feb 24 to Mar 17
-        # Week is Mar 3-9, which overlaps
-        assert note_date_applies_to_week(note_date, week_monday) is True
-
-    def test_explicit_event_end_overrides_effect_window(self):
+    def test_explicit_date_range_controls_applicability(self):
         note_date = pd.Timestamp("2025-02-24")
         text = "Disrupted from Feb 24 to Mar 8, forcing longer detours and higher costs."
         assert note_text_applies_to_week(text, note_date, pd.Timestamp("2025-03-03"))
         assert not note_text_applies_to_week(text, note_date, pd.Timestamp("2025-03-10"))
+
+    def test_stated_duration_controls_applicability(self):
+        note_date = pd.Timestamp("2025-02-24")
+        text = "The disruption lasted for about a week and raised transport costs."
+        assert note_text_applies_to_week(text, note_date, pd.Timestamp("2025-02-24"))
+        assert not note_text_applies_to_week(text, note_date, pd.Timestamp("2025-03-03"))
+
+    def test_long_stated_duration_can_apply_beyond_two_weeks(self):
+        note_date = pd.Timestamp("2025-01-01")
+        text = "A disruption increased transport costs for two months."
+        assert note_text_applies_to_week(text, note_date, pd.Timestamp("2025-02-24"))
+        assert not note_text_applies_to_week(text, note_date, pd.Timestamp("2025-03-03"))
+
+    def test_festival_week_duration(self):
+        note_date = pd.Timestamp("2025-01-20")
+        text = "A regional festival week saw a temporary surcharge."
+        assert note_text_applies_to_week(text, note_date, pd.Timestamp("2025-01-20"))
+        assert not note_text_applies_to_week(text, note_date, pd.Timestamp("2025-01-27"))
+
+    def test_quarter_duration(self):
+        note_date = pd.Timestamp("2025-09-22")
+        text = "Demand remained stable this quarter with no major disruptions."
+        assert note_text_applies_to_week(text, note_date, pd.Timestamp("2025-09-22"))
+        assert not note_text_applies_to_week(text, note_date, pd.Timestamp("2025-10-06"))
+
+    def test_this_week_duration(self):
+        note_date = pd.Timestamp("2025-05-05")
+        text = "Diesel prices rose nationwide starting this week."
+        assert note_text_applies_to_week(text, note_date, pd.Timestamp("2025-05-05"))
+        assert not note_text_applies_to_week(text, note_date, pd.Timestamp("2025-05-12"))
+
+    def test_duration_does_not_allow_future_note(self):
+        note_date = pd.Timestamp("2025-02-24")
+        text = "The disruption lasted for two weeks and raised transport costs."
+        assert not note_text_applies_to_week(text, note_date, pd.Timestamp("2025-02-17"))
 
     def test_no_impact_note_rejected(self):
         """Notes saying costs were not affected must be rejected."""

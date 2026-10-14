@@ -5,7 +5,7 @@ Flags route-weeks where cost is rising vs own history AND is outside
 normal range vs own history or peers.
 """
 
-from typing import Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -14,7 +14,6 @@ import pandas as pd
 def should_flag(
     vs_own_history_pct: Optional[float],
     vs_peer_pct: Optional[float],
-    shipment_count: int,
     config: dict,
 ) -> bool:
     """
@@ -26,23 +25,15 @@ def should_flag(
     3. Cost is outside normal range vs own history OR vs peers:
        - vs_own_history_pct > outlier_threshold (default 15%), OR
        - vs_peer_pct > peer_outlier_threshold (default 15%)
-    4. Shipment count >= minimum threshold (to avoid flagging noise)
-
     Returns True if the route-week should be flagged.
     """
     rising_threshold = config.get("flag_own_history_rising_threshold", 0.0)
     own_outlier = config.get("flag_own_history_outlier_threshold", 15.0)
     peer_outlier = config.get("flag_peer_outlier_threshold", 15.0)
-    min_shipments = config.get("min_shipments_for_flag", 1)
-
     # Cannot flag without historical baseline
     if vs_own_history_pct is None or (
         isinstance(vs_own_history_pct, float) and np.isnan(vs_own_history_pct)
     ):
-        return False
-
-    # Must meet minimum shipment count
-    if shipment_count < min_shipments:
         return False
 
     # Must be rising
@@ -72,7 +63,6 @@ def apply_flags(weekly: pd.DataFrame, config: dict) -> pd.DataFrame:
         lambda r: should_flag(
             r.get("vs_own_history_pct"),
             r.get("vs_peer_pct"),
-            r.get("shipment_count", 0),
             config,
         ),
         axis=1,

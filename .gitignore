@@ -30,6 +30,5 @@ cache/
 **/.ruff_cache/
 **/.cache/
 **/cache/
-llm_cache/
-**/llm_cache/
-AI Intern Case Study/run[123].csv
+run[123].csv
+run[123].csv

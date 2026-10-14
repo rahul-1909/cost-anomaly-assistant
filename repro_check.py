@@ -44,7 +44,6 @@ def main():
             data_dir=data_dir,
             config_path=config_path,
             output_path=p,
-            use_llm=True,
         )
         file_hash = sha256_file(p)
         hashes.append(file_hash)

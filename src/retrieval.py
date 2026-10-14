@@ -5,14 +5,14 @@ Embeds context_notes.csv and retrieves candidate notes for flagged route-weeks.
 All note matching logic is DETERMINISTIC CODE, not LLM-driven.
 """
 
+from __future__ import annotations
+
 import re
 from datetime import timedelta
 from typing import Dict, List, Optional, Tuple, Any
 
-import faiss
 import numpy as np
 import pandas as pd
-from sentence_transformers import SentenceTransformer
 
 
 # Patterns that indicate a note says costs were NOT affected or decreased
@@ -42,6 +42,9 @@ def build_index(
 
     Returns (faiss_index, embeddings, model).
     """
+    import faiss
+    from sentence_transformers import SentenceTransformer
+
     model = SentenceTransformer(model_name, revision=model_revision)
 
     # Build embedding texts: include metadata for better retrieval
@@ -112,75 +115,118 @@ def note_applies_to_route(applies_to: str, route: str) -> bool:
 def note_date_applies_to_week(
     note_date: pd.Timestamp,
     week_monday: pd.Timestamp,
-    lookback_days: int = 30,
-    effect_window_days: int = 14,
 ) -> bool:
-    """
-    Check if a note's date is applicable to the flagged week.
+    """Use the note's own calendar week when its text states no duration."""
+    note_date = pd.Timestamp(note_date).normalize()
+    week_monday = pd.Timestamp(week_monday).normalize()
+    note_monday = note_date - pd.Timedelta(days=note_date.weekday())
+    return note_monday == week_monday
 
-    A note applies if its effect window overlaps with the flagged week:
-    - The note's effect runs from note_date to note_date + effect_window_days
-    - The flagged week runs from week_monday to week_monday + 6 days (Sunday)
-    - There must be an overlap between these two intervals
-    - The note date must not be after the week's Sunday (no future notes)
-    - The note date must not be more than lookback_days before the week's Monday
-    """
-    week_sunday = week_monday + timedelta(days=6)
-    note_effect_end = note_date + timedelta(days=effect_window_days)
 
-    # Note must not be dated after the week's Sunday (no look-ahead to future events)
-    if note_date > week_sunday:
-        return False
+_NUMBER_WORDS = {
+    "a": 1,
+    "an": 1,
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8,
+    "nine": 9,
+    "ten": 10,
+}
 
-    # Note must not be too old
-    if note_date < week_monday - timedelta(days=lookback_days):
-        return False
 
-    # Note's effect window must overlap with the week
-    # Overlap exists if note_effect_end >= week_monday and note_date <= week_sunday
-    if note_effect_end < week_monday:
-        return False
+def _parse_note_date(value: str, default_year: int) -> pd.Timestamp:
+    """Parse a month/day date, using the note year when the text omits it."""
+    match = re.fullmatch(
+        r"([A-Za-z]{3,9})\s+(\d{1,2})(?:,?\s+(\d{4}))?", value.strip()
+    )
+    if not match:
+        raise ValueError(f"Unrecognized date in note: {value}")
+    month_text, day_text, year_text = match.groups()
+    month = pd.to_datetime(month_text, format="%B", errors="coerce")
+    if pd.isna(month):
+        month = pd.to_datetime(month_text, format="%b", errors="raise")
+    year = int(year_text) if year_text else default_year
+    return pd.Timestamp(year=year, month=month.month, day=int(day_text))
 
-    return True
+
+def _note_effect_interval(
+    note_text: str,
+    note_date: pd.Timestamp,
+) -> Tuple[pd.Timestamp, pd.Timestamp]:
+    """Derive an inclusive event interval from dates/durations stated in a note."""
+    note_date = pd.Timestamp(note_date).normalize()
+
+    # Explicit date ranges take precedence over inferred duration phrases.
+    date_range = re.search(
+        r"\bfrom\s+([A-Za-z]{3,9}\s+\d{1,2}(?:,?\s+\d{4})?)"
+        r"\s+to\s+([A-Za-z]{3,9}\s+\d{1,2}(?:,?\s+\d{4})?)",
+        note_text,
+        flags=re.IGNORECASE,
+    )
+    if date_range:
+        try:
+            start = _parse_note_date(date_range.group(1), note_date.year)
+            end = _parse_note_date(date_range.group(2), note_date.year)
+        except ValueError:
+            pass
+        else:
+            if end < start and not re.search(r"\d{4}", date_range.group(2)):
+                end = end.replace(year=end.year + 1)
+            return start, end
+
+    duration = re.search(
+        r"\b(?:for\s+)?(?:about\s+|approximately\s+)?"
+        r"(a|an|one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+"
+        r"(days?|weeks?|months?)\b",
+        note_text,
+        flags=re.IGNORECASE,
+    )
+    if duration:
+        amount_text, unit = duration.groups()
+        amount = _NUMBER_WORDS.get(amount_text.lower(), int(amount_text) if amount_text.isdigit() else 0)
+        if amount > 0:
+            if unit.lower().startswith("day"):
+                end = note_date + pd.Timedelta(days=amount - 1)
+            elif unit.lower().startswith("week"):
+                end = note_date + pd.Timedelta(days=(amount * 7) - 1)
+            else:
+                end = note_date + pd.DateOffset(months=amount) - pd.Timedelta(days=1)
+            return note_date, pd.Timestamp(end).normalize()
+
+    if re.search(r"\b(?:this|starting this)\s+week\b|\bfestival week\b", note_text, re.IGNORECASE):
+        start = note_date - pd.Timedelta(days=note_date.weekday())
+        return start, start + pd.Timedelta(days=6)
+
+    if re.search(r"\bthis quarter\b", note_text, re.IGNORECASE):
+        quarter_start_month = ((note_date.month - 1) // 3) * 3 + 1
+        start = pd.Timestamp(note_date.year, quarter_start_month, 1)
+        end = start + pd.DateOffset(months=3) - pd.Timedelta(days=1)
+        return start, pd.Timestamp(end).normalize()
+
+    # A note without an explicit duration is limited to the calendar week of
+    # its date; the system does not invent a generic multi-week carryover.
+    start = note_date - pd.Timedelta(days=note_date.weekday())
+    return start, start + pd.Timedelta(days=6)
 
 
 def note_text_applies_to_week(
     note_text: str,
     note_date: pd.Timestamp,
     week_monday: pd.Timestamp,
-    lookback_days: int = 30,
-    effect_window_days: int = 14,
 ) -> bool:
-    """Apply explicit event dates in note text before the generic effect cap."""
-    if not note_date_applies_to_week(
-        note_date, week_monday, lookback_days, effect_window_days
-    ):
-        return False
-
-    # Notes can give a more precise event interval than the configured default.
-    explicit_range = re.search(
-        r"\bfrom\s+([A-Za-z]{3,9}\s+\d{1,2})\s+to\s+([A-Za-z]{3,9}\s+\d{1,2})",
-        note_text,
-        flags=re.IGNORECASE,
-    )
-    if not explicit_range:
-        return True
-    def parse_month_day(value: str) -> pd.Timestamp:
-        for month_format in ("%B %d %Y", "%b %d %Y"):
-            try:
-                return pd.to_datetime(
-                    f"{value} {note_date.year}", format=month_format, errors="raise"
-                )
-            except ValueError:
-                pass
-        raise ValueError(f"Unrecognized explicit date in note: {value}")
-
-    start = parse_month_day(explicit_range.group(1))
-    end = parse_month_day(explicit_range.group(2))
-    if end < start:
-        end = end.replace(year=note_date.year + 1)
+    """Check overlap with the duration/date interval stated in the note."""
+    note_date = pd.Timestamp(note_date).normalize()
+    week_monday = pd.Timestamp(week_monday).normalize()
     week_sunday = week_monday + timedelta(days=6)
-    return start <= week_sunday and end >= week_monday
+    if note_date > week_sunday:
+        return False
+    event_start, event_end = _note_effect_interval(note_text, note_date)
+    return event_start <= week_sunday and event_end >= week_monday
 
 
 def note_indicates_cost_increase(note_text: str) -> bool:
@@ -248,9 +294,6 @@ def match_note_for_route_week(
     verdict_type is "justified" or "unexplained".
     """
     top_k = config.get("rag_top_k", 5)
-    lookback = config.get("note_lookback_days", 30)
-    effect_window = config.get("note_effect_window_days", 14)
-
     # Build query from route, week, and cost movement
     pct_str = f"{vs_own_history_pct:+.1f}%" if vs_own_history_pct is not None else "unknown"
     origin, dest = route.split("-", 1)
@@ -275,35 +318,28 @@ def match_note_for_route_week(
         if not note_applies_to_route(note_row["applies_to"], route):
             continue
 
-        # Rule (b): date must be applicable to the week (or within proximity window)
-        # Note: for proximity reporting of non-disruptions (like N006 on 2025-09-22 for 2025-09-15 week),
-        # allow within +/- 7 days
-        week_sunday = week_monday + timedelta(days=6)
+        # Rule (b): use event dates/durations stated in note text; future notes
+        # and notes outside their event interval cannot support a verdict.
         is_date_applicable = note_text_applies_to_week(
-            note_row["note"], note_row["date"], week_monday, lookback, effect_window
+            note_row["note"], note_row["date"], week_monday
         )
-        is_near_date = abs((note_row["date"] - week_monday).days) <= 14
 
         # Rule (c): note must indicate costs increased
         indicates_increase = note_indicates_cost_increase(note_row["note"])
 
         if is_date_applicable and indicates_increase:
             qualifying.append((note_row, score))
-        elif is_near_date and not indicates_increase:
+        elif is_date_applicable and not indicates_increase:
             rejected_applicable.append((note_row, score))
+
+    def tie_break_key(item: Tuple) -> Tuple:
+        note_row, _score = item
+        is_specific = 0 if note_row["applies_to"].lower() != "all routes" else 1
+        recency = -note_row["date"].timestamp()
+        return (is_specific, recency, note_row["note_id"])
 
     if qualifying:
         # Deterministic tie-break
-        def tie_break_key(item: Tuple) -> Tuple:
-            note_row, score = item
-            # Prefer route-specific over "All Routes"
-            is_specific = 0 if note_row["applies_to"].lower() != "all routes" else 1
-            # Prefer most recent note
-            recency = -note_row["date"].timestamp()
-            # Then by note_id alphabetically
-            note_id = note_row["note_id"]
-            return (is_specific, recency, note_id)
-
         qualifying.sort(key=tie_break_key)
         best_note = qualifying[0][0]
         return best_note["note_id"], best_note["note"], "justified", None
@@ -311,6 +347,7 @@ def match_note_for_route_week(
     # No qualifying note passed
     rejected_info = None
     if rejected_applicable:
+        rejected_applicable.sort(key=tie_break_key)
         best_rejected = rejected_applicable[0][0]
         rejected_info = {
             "note_id": best_rejected["note_id"],
