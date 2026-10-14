@@ -63,38 +63,38 @@ The pytest suite covers week assignment, aggregate cost calculations, strict pri
 
 ## Repository layout
 
-- `.gitignore` — excludes secrets, virtual environments, and generated caches.
-- `FreightTiger_Intern_CaseStudy.pdf` — case-study brief already included in the repository.
-- `README.md` — usage, methodology, verification, and limitations.
-- `ask.py` — optional plain-English query CLI.
-- `config.yaml` — metric, flagging, model, and output settings.
-- `context_notes.csv` — contextual notes used to explain eligible anomalies.
-- `cost_log.md` — LLM token and cost accounting for a pipeline run.
-- `eval/` — regression benchmark directory.
-- `eval/eval_verdicts.py` — fixed verdict and note-matching regression benchmark.
-- `main.py` — root-level pipeline entry point that writes `output.csv`.
-- `output.csv` — generated route-week results.
-- `repro_check.py` — three-run SHA-256 reproducibility check.
-- `repro_check.txt` — latest saved reproducibility report.
-- `requirements.txt` — pinned Python dependencies.
-- `retrieval_rank_audit.py` — gold-note rank audit for justified output rows.
-- `sample_output_format_v2.csv` — output schema and formatting contract.
-- `shipment_records.csv` — shipment-level input data.
-- `src/` — pipeline implementation package.
-- `src/__init__.py` — source package marker.
-- `src/cli.py` — optional plain-English query implementation.
-- `src/explain.py` — deterministic reason templates.
-- `src/flagging.py` — deterministic anomaly flag rules.
-- `src/loading.py` — input and configuration validation.
-- `src/metrics.py` — weekly costs and own-history/peer comparisons.
-- `src/retrieval.py` — note retrieval and deterministic eligibility checks.
-- `tests/` — automated test suite.
-- `tests/__init__.py` — test package marker.
-- `tests/test_core.py` — unit tests for metrics, flagging, and note rules.
-- `tests/test_independent_baselines.py` — independent raw-data metric checks.
-- `tests/test_justified_oracle.py` — justified route-week-note oracle checks.
-- `tests/test_output_contract.py` — output schema and note-evidence checks.
-- `tests/test_retrieval_fallback.py` — deterministic retrieval fallback checks.
+- `.gitignore` - excludes secrets, virtual environments, and generated caches.
+- `FreightTiger_Intern_CaseStudy.pdf` - case-study brief already included in the repository.
+- `README.md` - usage, methodology, verification, and limitations.
+- `ask.py` - optional plain-English query CLI.
+- `config.yaml` - metric, flagging, model, and output settings.
+- `context_notes.csv` - contextual notes used to explain eligible anomalies.
+- `cost_log.md` - LLM token and cost accounting for a pipeline run.
+- `eval/` - regression benchmark directory.
+- `eval/eval_verdicts.py` - fixed verdict and note-matching regression benchmark.
+- `main.py` - root-level pipeline entry point that writes `output.csv`.
+- `output.csv` - generated route-week results.
+- `repro_check.py` - three-run SHA-256 reproducibility check.
+- `repro_check.txt` - latest saved reproducibility report.
+- `requirements.txt` - pinned Python dependencies.
+- `retrieval_rank_audit.py` - gold-note rank audit for justified output rows.
+- `sample_output_format_v2.csv` - output schema and formatting contract.
+- `shipment_records.csv` - shipment-level input data.
+- `src/` - pipeline implementation package.
+- `src/__init__.py` - source package marker.
+- `src/cli.py` - optional plain-English query implementation.
+- `src/explain.py` - deterministic reason templates.
+- `src/flagging.py` - deterministic anomaly flag rules.
+- `src/loading.py` - input and configuration validation.
+- `src/metrics.py` - weekly costs and own-history/peer comparisons.
+- `src/retrieval.py` - note retrieval and deterministic eligibility checks.
+- `tests/` - automated test suite.
+- `tests/__init__.py` - test package marker.
+- `tests/test_core.py` - unit tests for metrics, flagging, and note rules.
+- `tests/test_independent_baselines.py` - independent raw-data metric checks.
+- `tests/test_justified_oracle.py` - justified route-week-note oracle checks.
+- `tests/test_output_contract.py` - output schema and note-evidence checks.
+- `tests/test_retrieval_fallback.py` - deterministic retrieval fallback checks.
 
 ## Running options
 
