@@ -1,0 +1,75 @@
+# Configuration for the FreightTiger Smart Assistant
+# All thresholds and parameters in one place for transparency.
+
+# --- Week assignment ---
+# Weeks run Monday (0) to Sunday (6). week_of = the Monday of that week.
+week_start_day: 0  # 0 = Monday
+
+# --- Cost metric ---
+# cost_per_tonne_km = sum(freight_cost_inr) / sum(quantity_tonnes * distance_km)
+# Aggregated at the route-week level (not averaged from per-shipment ratios).
+
+# --- vs_own_history ---
+# Trailing rolling window: number of prior weeks to average.
+own_history_window: 8
+# Use ONLY weeks strictly before the current week (no look-ahead).
+# If fewer than 8 prior weeks exist, use all available prior weeks.
+# If zero prior weeks exist, leave vs_own_history blank.
+
+# --- vs_similar_routes ---
+# Average cost_per_tonne_km in the same week across all OTHER routes
+# with the same route_type, excluding the route itself.
+
+# --- Flagging thresholds ---
+# A route-week is flagged when BOTH conditions hold:
+#   1. cost is RISING vs own history (vs_own_history_pct > 0)
+#   2. cost is outside normal range vs own history OR vs peers
+#
+# Threshold justification from data distribution (728 route-weeks, 2024-2025):
+#   - vs_own_history: Mean = +0.41%, Std = 4.25%, Median = +0.20%
+#   - 75th percentile = +2.6%, 90th percentile = +4.5%, 95th percentile = +5.8%
+#   - A threshold of 5.0% represents ~1.2 std deviations above historical mean
+#     (the 92nd percentile of positive movements). This cleanly detects:
+#       (a) The nationwide diesel price escalation of 5-7% documented in N003
+#       (b) Severe disruptions like Chennai-Bangalore flooding (N001, +14% to +18%)
+#       (c) Surcharges like Ahmedabad-Mumbai festival week (N002, +29.5%)
+#       (d) Unexplained route spikes like Delhi-Jaipur (+35.5%) and Mumbai-Pune creep (+9.2%)
+#   - vs_similar_routes: Mean = +0.36%, Std = 8.98%, 95th percentile = +13.4%
+#   - A peer threshold of 15.0% (>96th percentile) detects routes that diverge
+#     significantly from their peer length cohort in the same week.
+flag_own_history_rising_threshold: 0.0    # Must be strictly above 0% (rising)
+flag_own_history_outlier_threshold: 5.0   # Percentage above own history (92nd percentile)
+flag_peer_outlier_threshold: 15.0         # Percentage above peers (96th percentile)
+
+# Minimum number of shipments in a week to consider for flagging.
+# With 2940 shipments / 728 route-weeks ~ 4 shipments per route-week on average,
+# we set a minimum of 1 shipment.
+min_shipments_for_flag: 1
+
+# --- RAG / Note matching ---
+# Embedding model for context notes
+embedding_model: "all-MiniLM-L6-v2"
+# Number of candidate notes to retrieve from vector search (search all available notes)
+rag_top_k: 10
+# Maximum number of days BEFORE the flagged week's Monday that a note can apply.
+# Notes dated after the flagged week's Sunday are rejected.
+note_lookback_days: 30
+# A note's effect window: from note date to note date + this many days.
+# 14 days (2 weeks) covers standard temporary surcharges, flood disruptions (Feb 24 - Mar 8),
+# and nationwide price shifts, while preventing lingering false justifications
+# once roads reopen (e.g., Chennai-Bangalore passable Mar 9, confirmed normal Mar 17).
+note_effect_window_days: 14
+
+# --- LLM settings ---
+# Using Google Gemini free tier (gemini-2.0-flash) with local disk cache and deterministic fallback
+llm_provider: "gemini"
+llm_model: "gemini-2.0-flash"
+llm_temperature: 0
+# Cache directory for LLM responses (keyed by prompt hash)
+llm_cache_dir: "llm_cache"
+
+# --- Output formatting ---
+# cost_per_tonne_km rounded to 2 decimal places
+cost_precision: 2
+# vs_own_history format: "+X.X% vs this route's past average"
+# vs_similar_routes format: "+X.X% vs similar-length routes this week"
