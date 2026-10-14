@@ -52,14 +52,17 @@ def run_pipeline(
     flagged_count = weekly["flagged_bool"].sum()
     print(f"  Flagged {flagged_count} candidate anomalous route-weeks")
 
-    print(f"[{datetime.now():%H:%M:%S}] Building FAISS index...")
+    print(f"[{datetime.now():%H:%M:%S}] Building note retrieval index...")
     embedding_model = config.get("embedding_model", "all-MiniLM-L6-v2")
     faiss_index, embeddings, model = build_index(
         notes,
         model_name=embedding_model,
         model_revision=config.get("embedding_model_revision"),
     )
-    print(f"  Index built with {len(notes)} notes, {embeddings.shape[1]}-dim embeddings")
+    if embeddings.shape[1]:
+        print(f"  Index built with {len(notes)} notes, {embeddings.shape[1]}-dim embeddings")
+    else:
+        print(f"  Index built with {len(notes)} notes using deterministic lexical fallback")
 
     print(f"[{datetime.now():%H:%M:%S}] Matching notes and generating reasons...")
     matched_note_ids = []

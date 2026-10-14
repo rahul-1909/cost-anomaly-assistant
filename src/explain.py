@@ -50,7 +50,7 @@ def generate_template_reason_unexplained(
         note_date = rejected_info.get("date", "")
         core_fact = _extract_core_fact(rejected_info.get("note", ""))
         return (
-            f"The closest note ({note_id}, {note_date}) mentions {core_fact} -- "
+            f"The note ({note_id}, {note_date}) mentions {core_fact} -- "
             "it does not describe a reason for a cost rise on this route. "
             "No genuine justification found; flagged for review."
         )

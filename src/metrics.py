@@ -67,13 +67,8 @@ def compute_vs_own_history(
     for route in result["route"].unique():
         mask = result["route"] == route
         route_data = result.loc[mask].sort_values("week_of")
-        indices = route_data.index.tolist()
-        costs = route_data["cost_per_tonne_km"].values
 
-        for i, idx in enumerate(indices):
-            if i == 0:
-                # No prior weeks
-                continue
+        for idx in route_data.index:
             # Use the trailing calendar window, not merely the last N observed
             # rows. Missing route-weeks must not pull older weeks into baseline.
             current_week = route_data.loc[idx, "week_of"]
@@ -82,8 +77,10 @@ def compute_vs_own_history(
                 (route_data["week_of"] >= window_start)
                 & (route_data["week_of"] < current_week)
             ]
-            prior_costs = prior_rows["cost_per_tonne_km"].to_numpy()
-            result.loc[idx, "own_history_avg"] = np.mean(prior_costs)
+            if not prior_rows.empty:
+                result.loc[idx, "own_history_avg"] = prior_rows[
+                    "cost_per_tonne_km"
+                ].mean()
 
     return result
 
@@ -134,16 +131,22 @@ def format_vs_own_history(pct: Optional[float]) -> str:
     """Format the vs_own_history percentage as required by the output spec."""
     if pct is None or (isinstance(pct, float) and np.isnan(pct)):
         return ""
-    sign = "+" if pct >= 0 else ""
-    return f"{sign}{pct:.1f}% vs this route's past average"
+    display_pct = round(pct, 1)
+    if display_pct == 0:
+        return "0.0% vs this route's past average"
+    sign = "+" if display_pct > 0 else ""
+    return f"{sign}{display_pct:.1f}% vs this route's past average"
 
 
 def format_vs_similar_routes(pct: Optional[float]) -> str:
     """Format the vs_similar_routes percentage as required by the output spec."""
     if pct is None or (isinstance(pct, float) and np.isnan(pct)):
         return ""
-    sign = "+" if pct >= 0 else ""
-    return f"{sign}{pct:.1f}% vs similar-length routes this week"
+    display_pct = round(pct, 1)
+    if display_pct == 0:
+        return "0.0% vs similar-length routes this week"
+    sign = "+" if display_pct > 0 else ""
+    return f"{sign}{display_pct:.1f}% vs similar-length routes this week"
 
 
 def build_metrics_table(shipments: pd.DataFrame, config: dict) -> pd.DataFrame:

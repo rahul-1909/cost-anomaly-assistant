@@ -1,14 +1,14 @@
 ================================================================================
 FREIGHTTIGER SMART ASSISTANT -- REPRODUCIBILITY VERIFICATION REPORT
 ================================================================================
-Timestamp:              2026-10-14T19:01:02.634085
+Timestamp:              2026-10-14T19:39:32.582509
 Python Version:         3.14.7
 Total Pipeline Runs:    3 untouched runs on shipment_records.csv
 
 RUN CHECKSUMS (SHA-256):
-  Run 1: 9bad1bb085fc8232466284ddc4bcf756e4daec218886ef3d77b25b7be9085c54 (run1.csv)
-  Run 2: 9bad1bb085fc8232466284ddc4bcf756e4daec218886ef3d77b25b7be9085c54 (run2.csv)
-  Run 3: 9bad1bb085fc8232466284ddc4bcf756e4daec218886ef3d77b25b7be9085c54 (run3.csv)
+  Run 1: 2e06b1f19af660b1602ea38e98df74662badd0a60f3608602e427e6684220859 (run1.csv)
+  Run 2: 2e06b1f19af660b1602ea38e98df74662badd0a60f3608602e427e6684220859 (run2.csv)
+  Run 3: 2e06b1f19af660b1602ea38e98df74662badd0a60f3608602e427e6684220859 (run3.csv)
 
 DIFF VERIFICATION:
   Run 1 vs Run 2 Diff Count: 0 lines

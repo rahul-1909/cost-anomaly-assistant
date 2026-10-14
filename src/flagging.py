@@ -23,7 +23,7 @@ def should_flag(
     1. vs_own_history_pct is not None (we have historical data)
     2. Cost is rising vs own history (pct > rising_threshold, i.e., > 0%)
     3. Cost is outside normal range vs own history OR vs peers:
-       - vs_own_history_pct > outlier_threshold (default 15%), OR
+       - vs_own_history_pct > outlier_threshold (default 5%), OR
        - vs_peer_pct > peer_outlier_threshold (default 15%)
     Returns True if the route-week should be flagged.
     """

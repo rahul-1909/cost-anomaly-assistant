@@ -18,7 +18,7 @@ Ahmedabad-Mumbai,2024-04-15,2.46,-4.1% vs this route's past average,-7.2% vs sim
 Ahmedabad-Mumbai,2024-04-22,2.68,+4.5% vs this route's past average,+4.3% vs similar-length routes this week,No,,
 Ahmedabad-Mumbai,2024-04-29,2.52,-2.1% vs this route's past average,-4.3% vs similar-length routes this week,No,,
 Ahmedabad-Mumbai,2024-05-06,2.6,+1.0% vs this route's past average,-0.4% vs similar-length routes this week,No,,
-Ahmedabad-Mumbai,2024-05-13,2.65,+3.2% vs this route's past average,-0.0% vs similar-length routes this week,No,,
+Ahmedabad-Mumbai,2024-05-13,2.65,+3.2% vs this route's past average,0.0% vs similar-length routes this week,No,,
 Ahmedabad-Mumbai,2024-05-20,2.58,-0.3% vs this route's past average,-4.5% vs similar-length routes this week,No,,
 Ahmedabad-Mumbai,2024-05-27,2.49,-3.3% vs this route's past average,-6.3% vs similar-length routes this week,No,,
 Ahmedabad-Mumbai,2024-06-03,2.48,-3.4% vs this route's past average,-7.3% vs similar-length routes this week,No,,
@@ -67,7 +67,7 @@ Ahmedabad-Mumbai,2025-03-24,2.44,-4.0% vs this route's past average,-8.3% vs sim
 Ahmedabad-Mumbai,2025-03-31,2.61,+3.2% vs this route's past average,-3.7% vs similar-length routes this week,No,,
 Ahmedabad-Mumbai,2025-04-07,2.49,-2.1% vs this route's past average,-6.2% vs similar-length routes this week,No,,
 Ahmedabad-Mumbai,2025-04-14,2.45,-4.3% vs this route's past average,-7.2% vs similar-length routes this week,No,,
-Ahmedabad-Mumbai,2025-04-21,2.59,+1.8% vs this route's past average,-0.0% vs similar-length routes this week,No,,
+Ahmedabad-Mumbai,2025-04-21,2.59,+1.8% vs this route's past average,0.0% vs similar-length routes this week,No,,
 Ahmedabad-Mumbai,2025-04-28,2.65,+3.6% vs this route's past average,+0.6% vs similar-length routes this week,No,,
 Ahmedabad-Mumbai,2025-05-05,2.59,+1.1% vs this route's past average,-8.8% vs similar-length routes this week,No,,
 Ahmedabad-Mumbai,2025-05-12,2.61,+1.7% vs this route's past average,-6.7% vs similar-length routes this week,No,,
@@ -146,7 +146,7 @@ Chennai-Bangalore,2024-09-30,2.63,-1.6% vs this route's past average,+1.5% vs si
 Chennai-Bangalore,2024-10-07,2.71,+1.2% vs this route's past average,+4.4% vs similar-length routes this week,No,,
 Chennai-Bangalore,2024-10-14,2.63,-1.5% vs this route's past average,+3.2% vs similar-length routes this week,No,,
 Chennai-Bangalore,2024-10-21,2.72,+2.7% vs this route's past average,+4.1% vs similar-length routes this week,No,,
-Chennai-Bangalore,2024-10-28,2.6,-2.1% vs this route's past average,-0.0% vs similar-length routes this week,No,,
+Chennai-Bangalore,2024-10-28,2.6,-2.1% vs this route's past average,0.0% vs similar-length routes this week,No,,
 Chennai-Bangalore,2024-11-04,2.73,+2.5% vs this route's past average,+7.4% vs similar-length routes this week,No,,
 Chennai-Bangalore,2024-11-11,2.75,+3.2% vs this route's past average,+5.9% vs similar-length routes this week,No,,
 Chennai-Bangalore,2024-11-18,2.77,+3.5% vs this route's past average,+7.7% vs similar-length routes this week,No,,
@@ -166,7 +166,7 @@ Chennai-Bangalore,2025-02-17,2.84,+4.7% vs this route's past average,+10.3% vs s
 Chennai-Bangalore,2025-02-24,3.58,+31.5% vs this route's past average,+38.7% vs similar-length routes this week,No (justified),N001,"Matches note N001 dated 2025-02-24: heavy flooding disrupted highway truck movement, forcing detours and higher trip costs. The cost rise has a clear explanation."
 Chennai-Bangalore,2025-03-03,3.48,+22.8% vs this route's past average,+32.0% vs similar-length routes this week,No (justified),N001,"Matches note N001 dated 2025-02-24: heavy flooding disrupted highway truck movement, forcing detours and higher trip costs. The cost rise has a clear explanation."
 Chennai-Bangalore,2025-03-10,3.57,+22.1% vs this route's past average,+33.8% vs similar-length routes this week,Yes,,No matching note found for this route or date range. Cost rise looks unexplained and worth a human review.
-Chennai-Bangalore,2025-03-17,3.47,+13.7% vs this route's past average,+33.5% vs similar-length routes this week,Yes,,"The closest note (N009, 2025-03-17) mentions the corridor returned to normal conditions after repairs were completed -- it does not describe a reason for a cost rise on this route. No genuine justification found; flagged for review."
+Chennai-Bangalore,2025-03-17,3.47,+13.7% vs this route's past average,+33.5% vs similar-length routes this week,Yes,,"The note (N009, 2025-03-17) mentions the corridor returned to normal conditions after repairs were completed -- it does not describe a reason for a cost rise on this route. No genuine justification found; flagged for review."
 Chennai-Bangalore,2025-03-24,2.71,-13.6% vs this route's past average,+7.5% vs similar-length routes this week,No,,
 Chennai-Bangalore,2025-03-31,2.78,-11.1% vs this route's past average,+5.9% vs similar-length routes this week,No,,
 Chennai-Bangalore,2025-04-07,2.74,-12.9% vs this route's past average,+7.9% vs similar-length routes this week,No,,
@@ -189,7 +189,7 @@ Chennai-Bangalore,2025-07-28,2.77,-3.3% vs this route's past average,+2.7% vs si
 Chennai-Bangalore,2025-08-04,2.92,+2.7% vs this route's past average,+9.4% vs similar-length routes this week,No,,
 Chennai-Bangalore,2025-08-11,2.84,-0.7% vs this route's past average,+5.3% vs similar-length routes this week,No,,
 Chennai-Bangalore,2025-08-18,2.86,+0.5% vs this route's past average,+4.7% vs similar-length routes this week,No,,
-Chennai-Bangalore,2025-08-25,2.85,-0.0% vs this route's past average,+4.5% vs similar-length routes this week,No,,
+Chennai-Bangalore,2025-08-25,2.85,0.0% vs this route's past average,+4.5% vs similar-length routes this week,No,,
 Chennai-Bangalore,2025-09-01,2.9,+1.2% vs this route's past average,+8.1% vs similar-length routes this week,No,,
 Chennai-Bangalore,2025-09-08,2.77,-3.1% vs this route's past average,+3.0% vs similar-length routes this week,No,,
 Chennai-Bangalore,2025-09-15,2.97,+4.2% vs this route's past average,+6.4% vs similar-length routes this week,No,,
@@ -211,7 +211,7 @@ Delhi-Chennai,2024-01-01,1.96,,-4.7% vs similar-length routes this week,No,,
 Delhi-Chennai,2024-01-08,2.1,+7.2% vs this route's past average,-0.2% vs similar-length routes this week,Yes,,No matching note found for this route or date range. Cost rise looks unexplained and worth a human review.
 Delhi-Chennai,2024-01-15,2.15,+5.9% vs this route's past average,+4.7% vs similar-length routes this week,Yes,,No matching note found for this route or date range. Cost rise looks unexplained and worth a human review.
 Delhi-Chennai,2024-01-22,2.03,-1.9% vs this route's past average,-2.0% vs similar-length routes this week,No,,
-Delhi-Chennai,2024-01-29,2.0,-2.7% vs this route's past average,-0.0% vs similar-length routes this week,No,,
+Delhi-Chennai,2024-01-29,2.0,-2.7% vs this route's past average,0.0% vs similar-length routes this week,No,,
 Delhi-Chennai,2024-02-05,2.22,+8.5% vs this route's past average,+7.8% vs similar-length routes this week,Yes,,No matching note found for this route or date range. Cost rise looks unexplained and worth a human review.
 Delhi-Chennai,2024-02-12,2.04,-1.5% vs this route's past average,-2.1% vs similar-length routes this week,No,,
 Delhi-Chennai,2024-02-19,2.13,+3.1% vs this route's past average,+7.6% vs similar-length routes this week,No,,
@@ -409,7 +409,7 @@ Delhi-Jaipur,2025-10-20,3.28,-0.3% vs this route's past average,-19.9% vs simila
 Delhi-Jaipur,2025-10-27,3.18,-3.6% vs this route's past average,-22.0% vs similar-length routes this week,No,,
 Delhi-Jaipur,2025-11-03,3.38,+3.8% vs this route's past average,-19.4% vs similar-length routes this week,No,,
 Delhi-Jaipur,2025-11-10,3.27,-0.3% vs this route's past average,-17.6% vs similar-length routes this week,No,,
-Delhi-Jaipur,2025-11-17,3.28,+0.0% vs this route's past average,-24.0% vs similar-length routes this week,No,,
+Delhi-Jaipur,2025-11-17,3.28,0.0% vs this route's past average,-24.0% vs similar-length routes this week,No,,
 Delhi-Jaipur,2025-11-24,3.38,+2.6% vs this route's past average,-18.7% vs similar-length routes this week,No,,
 Delhi-Jaipur,2025-12-01,3.2,-2.7% vs this route's past average,-27.2% vs similar-length routes this week,No,,
 Delhi-Jaipur,2025-12-08,3.19,-2.8% vs this route's past average,-28.0% vs similar-length routes this week,No,,
@@ -430,14 +430,14 @@ Kolkata-Bhubaneswar,2024-03-18,2.69,+2.0% vs this route's past average,+5.0% vs 
 Kolkata-Bhubaneswar,2024-03-25,2.67,+0.9% vs this route's past average,-0.6% vs similar-length routes this week,No,,
 Kolkata-Bhubaneswar,2024-04-01,2.52,-5.2% vs this route's past average,-4.3% vs similar-length routes this week,No,,
 Kolkata-Bhubaneswar,2024-04-08,2.55,-3.4% vs this route's past average,-4.7% vs similar-length routes this week,No,,
-Kolkata-Bhubaneswar,2024-04-15,2.62,-0.0% vs this route's past average,+1.9% vs similar-length routes this week,No,,
+Kolkata-Bhubaneswar,2024-04-15,2.62,0.0% vs this route's past average,+1.9% vs similar-length routes this week,No,,
 Kolkata-Bhubaneswar,2024-04-22,2.54,-2.8% vs this route's past average,-3.7% vs similar-length routes this week,No,,
 Kolkata-Bhubaneswar,2024-04-29,2.54,-2.2% vs this route's past average,-3.3% vs similar-length routes this week,No,,
 Kolkata-Bhubaneswar,2024-05-06,2.66,+2.2% vs this route's past average,+3.0% vs similar-length routes this week,No,,
 Kolkata-Bhubaneswar,2024-05-13,2.55,-1.8% vs this route's past average,-5.8% vs similar-length routes this week,No,,
 Kolkata-Bhubaneswar,2024-05-20,2.73,+5.8% vs this route's past average,+3.9% vs similar-length routes this week,Yes,,No matching note found for this route or date range. Cost rise looks unexplained and worth a human review.
 Kolkata-Bhubaneswar,2024-05-27,2.6,+0.4% vs this route's past average,-0.5% vs similar-length routes this week,No,,
-Kolkata-Bhubaneswar,2024-06-03,2.6,-0.0% vs this route's past average,-1.0% vs similar-length routes this week,No,,
+Kolkata-Bhubaneswar,2024-06-03,2.6,0.0% vs this route's past average,-1.0% vs similar-length routes this week,No,,
 Kolkata-Bhubaneswar,2024-06-10,2.48,-4.8% vs this route's past average,-1.8% vs similar-length routes this week,No,,
 Kolkata-Bhubaneswar,2024-06-17,2.58,-0.2% vs this route's past average,-2.9% vs similar-length routes this week,No,,
 Kolkata-Bhubaneswar,2024-06-24,2.7,+4.2% vs this route's past average,+2.4% vs similar-length routes this week,No,,
@@ -482,7 +482,7 @@ Kolkata-Bhubaneswar,2025-03-17,2.54,-3.3% vs this route's past average,-17.1% vs
 Kolkata-Bhubaneswar,2025-03-24,2.61,-0.6% vs this route's past average,+1.3% vs similar-length routes this week,No,,
 Kolkata-Bhubaneswar,2025-03-31,2.65,+0.7% vs this route's past average,-2.0% vs similar-length routes this week,No,,
 Kolkata-Bhubaneswar,2025-04-07,2.58,-2.2% vs this route's past average,-1.4% vs similar-length routes this week,No,,
-Kolkata-Bhubaneswar,2025-04-14,2.57,-2.3% vs this route's past average,-0.0% vs similar-length routes this week,No,,
+Kolkata-Bhubaneswar,2025-04-14,2.57,-2.3% vs this route's past average,0.0% vs similar-length routes this week,No,,
 Kolkata-Bhubaneswar,2025-04-21,2.6,-1.0% vs this route's past average,+0.2% vs similar-length routes this week,No,,
 Kolkata-Bhubaneswar,2025-04-28,2.58,-1.4% vs this route's past average,-3.5% vs similar-length routes this week,No,,
 Kolkata-Bhubaneswar,2025-05-05,2.73,+5.1% vs this route's past average,-1.4% vs similar-length routes this week,No (justified),N003,"Matches note N003 dated 2025-05-05: diesel prices rose nationwide, pushing up transportation costs across all routes. The cost rise has a clear explanation."
@@ -522,8 +522,8 @@ Kolkata-Bhubaneswar,2025-12-22,2.84,+3.0% vs this route's past average,+2.1% vs 
 Mumbai-Delhi,2024-01-01,2.05,,+4.9% vs similar-length routes this week,No,,
 Mumbai-Delhi,2024-01-08,2.1,+2.5% vs this route's past average,+0.2% vs similar-length routes this week,No,,
 Mumbai-Delhi,2024-01-15,2.05,-1.3% vs this route's past average,-4.5% vs similar-length routes this week,No,,
-Mumbai-Delhi,2024-01-22,2.07,-0.0% vs this route's past average,+2.0% vs similar-length routes this week,No,,
-Mumbai-Delhi,2024-01-29,2.0,-3.2% vs this route's past average,+0.0% vs similar-length routes this week,No,,
+Mumbai-Delhi,2024-01-22,2.07,0.0% vs this route's past average,+2.0% vs similar-length routes this week,No,,
+Mumbai-Delhi,2024-01-29,2.0,-3.2% vs this route's past average,0.0% vs similar-length routes this week,No,,
 Mumbai-Delhi,2024-02-05,2.06,+0.2% vs this route's past average,-7.3% vs similar-length routes this week,No,,
 Mumbai-Delhi,2024-02-12,2.09,+1.6% vs this route's past average,+2.2% vs similar-length routes this week,No,,
 Mumbai-Delhi,2024-02-19,1.98,-3.7% vs this route's past average,-7.0% vs similar-length routes this week,No,,
@@ -713,12 +713,12 @@ Mumbai-Pune,2025-08-25,3.63,+0.5% vs this route's past average,+12.4% vs similar
 Mumbai-Pune,2025-09-01,3.67,+1.2% vs this route's past average,+6.3% vs similar-length routes this week,No,,
 Mumbai-Pune,2025-09-08,3.72,+2.5% vs this route's past average,+14.4% vs similar-length routes this week,No,,
 Mumbai-Pune,2025-09-15,3.98,+9.2% vs this route's past average,+23.6% vs similar-length routes this week,Yes,,No matching note found for this route or date range. Cost rise looks unexplained and worth a human review.
-Mumbai-Pune,2025-09-22,3.8,+2.6% vs this route's past average,+18.2% vs similar-length routes this week,Yes,,"The closest note (N006, 2025-09-22) mentions stable demand with no major disruptions -- it does not describe a reason for a cost rise on this route. No genuine justification found; flagged for review."
+Mumbai-Pune,2025-09-22,3.8,+2.6% vs this route's past average,+18.2% vs similar-length routes this week,Yes,,"The note (N006, 2025-09-22) mentions stable demand with no major disruptions -- it does not describe a reason for a cost rise on this route. No genuine justification found; flagged for review."
 Mumbai-Pune,2025-09-29,3.82,+2.4% vs this route's past average,+11.2% vs similar-length routes this week,No,,
 Mumbai-Pune,2025-10-06,3.94,+5.4% vs this route's past average,+22.9% vs similar-length routes this week,Yes,,No matching note found for this route or date range. Cost rise looks unexplained and worth a human review.
 Mumbai-Pune,2025-10-13,3.87,+1.9% vs this route's past average,+17.0% vs similar-length routes this week,Yes,,No matching note found for this route or date range. Cost rise looks unexplained and worth a human review.
 Mumbai-Pune,2025-10-20,4.1,+7.7% vs this route's past average,+24.8% vs similar-length routes this week,Yes,,No matching note found for this route or date range. Cost rise looks unexplained and worth a human review.
-Mumbai-Pune,2025-10-27,4.07,+5.5% vs this route's past average,+28.3% vs similar-length routes this week,Yes,,"The closest note (N010, 2025-10-27) mentions compliance costs were absorbed by transporters without a rate change -- it does not describe a reason for a cost rise on this route. No genuine justification found; flagged for review."
+Mumbai-Pune,2025-10-27,4.07,+5.5% vs this route's past average,+28.3% vs similar-length routes this week,Yes,,"The note (N010, 2025-10-27) mentions compliance costs were absorbed by transporters without a rate change -- it does not describe a reason for a cost rise on this route. No genuine justification found; flagged for review."
 Mumbai-Pune,2025-11-03,4.2,+7.4% vs this route's past average,+24.1% vs similar-length routes this week,Yes,,No matching note found for this route or date range. Cost rise looks unexplained and worth a human review.
 Mumbai-Pune,2025-11-10,3.97,-0.1% vs this route's past average,+21.4% vs similar-length routes this week,No,,
 Mumbai-Pune,2025-11-17,4.32,+8.9% vs this route's past average,+31.6% vs similar-length routes this week,Yes,,No matching note found for this route or date range. Cost rise looks unexplained and worth a human review.

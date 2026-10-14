@@ -7,6 +7,7 @@ All note matching logic is DETERMINISTIC CODE, not LLM-driven.
 
 from __future__ import annotations
 
+import logging
 import re
 from datetime import timedelta
 from typing import Dict, List, Optional, Tuple, Any
@@ -29,25 +30,23 @@ NO_IMPACT_PATTERNS = [
 ]
 
 
+class LexicalIndex:
+    """Small deterministic fallback index used when vector search is unavailable."""
+
+    def __init__(self, note_ids: List[str], documents: List[str]):
+        self.note_ids = note_ids
+        self.document_tokens = [
+            set(re.findall(r"[a-z0-9]+", document.lower())) for document in documents
+        ]
+
+
 def build_index(
     notes: pd.DataFrame,
     model_name: str = "all-MiniLM-L6-v2",
     model_revision: Optional[str] = None,
-) -> Tuple[faiss.IndexFlatIP, np.ndarray, SentenceTransformer]:
-    """
-    Build a FAISS index from context notes embeddings.
-
-    Each note is embedded using the concatenation of its metadata and text.
-    Uses inner product (cosine similarity after normalization).
-
-    Returns (faiss_index, embeddings, model).
-    """
-    import faiss
-    from sentence_transformers import SentenceTransformer
-
-    model = SentenceTransformer(model_name, revision=model_revision)
-
-    # Build embedding texts: include metadata for better retrieval
+) -> Tuple[Any, np.ndarray, Any]:
+    """Build a vector index, or a stable lexical index if vector setup fails."""
+    # Include metadata in both indexes so retrieval sees route and date context.
     texts = []
     for _, row in notes.iterrows():
         text = (
@@ -56,21 +55,35 @@ def build_index(
         )
         texts.append(text)
 
-    embeddings = model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
-    embeddings = embeddings.astype(np.float32)
+    try:
+        from sentence_transformers import SentenceTransformer
 
-    # Build FAISS index with inner product (cosine similarity for normalized vectors)
-    dim = embeddings.shape[1]
-    index = faiss.IndexFlatIP(dim)
-    index.add(embeddings)
+        model = SentenceTransformer(model_name, revision=model_revision)
+        embeddings = model.encode(
+            texts, normalize_embeddings=True, show_progress_bar=False
+        ).astype(np.float32)
 
-    return index, embeddings, model
+        import faiss
+
+        # Inner product is cosine similarity for normalized vectors.
+        index = faiss.IndexFlatIP(embeddings.shape[1])
+        index.add(embeddings)
+        return index, embeddings, model
+    except Exception as exc:
+        logging.warning(
+            "Could not load the embedding model or FAISS index (%s); "
+            "using deterministic lexical retrieval.",
+            exc,
+        )
+        index = LexicalIndex(notes["note_id"].astype(str).tolist(), texts)
+        # A zero-width array signals the fallback to the pipeline's status log.
+        return index, np.empty((len(notes), 0), dtype=np.float32), None
 
 
 def retrieve_candidates(
     query: str,
-    index: faiss.IndexFlatIP,
-    model: SentenceTransformer,
+    index: Any,
+    model: Any,
     notes: pd.DataFrame,
     top_k: int = 5,
 ) -> List[Tuple[int, float]]:
@@ -79,6 +92,17 @@ def retrieve_candidates(
 
     Returns list of (note_index, similarity_score) tuples.
     """
+    if isinstance(index, LexicalIndex):
+        query_tokens = set(re.findall(r"[a-z0-9]+", query.lower()))
+        query_size = max(len(query_tokens), 1)
+        ranked = []
+        for note_idx, document_tokens in enumerate(index.document_tokens):
+            overlap = len(query_tokens & document_tokens)
+            denom = (query_size * max(len(document_tokens), 1)) ** 0.5
+            ranked.append((note_idx, overlap / denom))
+        ranked.sort(key=lambda item: (-item[1], index.note_ids[item[0]]))
+        return ranked[: min(top_k, len(notes))]
+
     q_emb = model.encode([query], normalize_embeddings=True).astype(np.float32)
     scores, indices = index.search(q_emb, min(top_k, len(notes)))
     return list(zip(indices[0].tolist(), scores[0].tolist()))
@@ -267,8 +291,8 @@ def match_note_for_route_week(
     route: str,
     week_monday: pd.Timestamp,
     vs_own_history_pct: Optional[float],
-    index: faiss.IndexFlatIP,
-    model: SentenceTransformer,
+    index: Any,
+    model: Any,
     notes: pd.DataFrame,
     config: dict,
 ) -> Tuple[Optional[str], Optional[str], str, Optional[Dict[str, Any]]]:
@@ -286,22 +310,15 @@ def match_note_for_route_week(
     - Then prefer most recent note
     - Then prefer lowest note_id (alphabetical)
 
-    If no note qualifies, also checks if a candidate note was retrieved that
-    matched route & date proximity but was rejected by Rule (c). If so, returns
-    that rejected note's details to ground the explanation (e.g. sample format row 3).
+    If no note qualifies, checks all notes for applicable context that fails the
+    cost-increase rule. That rejected context is explanatory only and cannot
+    change the verdict.
 
     Returns (matched_note_id, note_text, verdict_type, rejected_candidate_info).
     verdict_type is "justified" or "unexplained".
     """
     top_k = config.get("rag_top_k", 5)
-    # Build query from route, week, and cost movement
-    pct_str = f"{vs_own_history_pct:+.1f}%" if vs_own_history_pct is not None else "unknown"
-    origin, dest = route.split("-", 1)
-    query = (
-        f"Cost increase on route {route} from {origin} to {dest} "
-        f"during week of {week_monday.strftime('%Y-%m-%d')}. "
-        f"Cost changed by {pct_str} compared to historical average."
-    )
+    query = build_route_week_query(route, week_monday, vs_own_history_pct)
 
     # Retrieve candidates
     candidates = retrieve_candidates(query, index, model, notes, top_k=top_k)
@@ -329,8 +346,18 @@ def match_note_for_route_week(
 
         if is_date_applicable and indicates_increase:
             qualifying.append((note_row, score))
-        elif is_date_applicable and not indicates_increase:
-            rejected_applicable.append((note_row, score))
+
+    # Rejected context is selected independently of retrieval backend/ranking,
+    # so a vector-model outage cannot change an unexplained row's reason text.
+    for _, note_row in notes.iterrows():
+        if (
+            note_applies_to_route(note_row["applies_to"], route)
+            and note_text_applies_to_week(
+                note_row["note"], note_row["date"], week_monday
+            )
+            and not note_indicates_cost_increase(note_row["note"])
+        ):
+            rejected_applicable.append((note_row, 0.0))
 
     def tie_break_key(item: Tuple) -> Tuple:
         note_row, _score = item
@@ -357,3 +384,22 @@ def match_note_for_route_week(
         }
 
     return None, None, "unexplained", rejected_info
+
+
+def build_route_week_query(
+    route: str,
+    week_monday: pd.Timestamp,
+    vs_own_history_pct: Optional[float],
+) -> str:
+    """Construct the same retrieval query for matching and rank audits."""
+    pct_str = (
+        f"{vs_own_history_pct:+.1f}%"
+        if vs_own_history_pct is not None
+        else "unknown"
+    )
+    origin, dest = route.split("-", 1)
+    return (
+        f"Cost increase on route {route} from {origin} to {dest} "
+        f"during week of {pd.Timestamp(week_monday).strftime('%Y-%m-%d')}. "
+        f"Cost changed by {pct_str} compared to historical average."
+    )

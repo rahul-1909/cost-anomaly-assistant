@@ -25,29 +25,27 @@ own_history_window: 8
 #   1. cost is RISING vs own history (vs_own_history_pct > 0)
 #   2. cost is outside normal range vs own history OR vs peers
 #
-# Threshold justification from data distribution (728 route-weeks, 2024-2025):
-#   - vs_own_history: Mean = +0.41%, Std = 4.25%, Median = +0.20%
-#   - 75th percentile = +2.6%, 90th percentile = +4.5%, 95th percentile = +5.8%
-#   - A threshold of 5.0% represents ~1.2 std deviations above historical mean
-#     (the 92nd percentile of positive movements). This cleanly detects:
-#       (a) The nationwide diesel price escalation of 5-7% documented in N003
-#       (b) Severe disruptions like Chennai-Bangalore flooding (N001, +14% to +18%)
-#       (c) Surcharges like Ahmedabad-Mumbai festival week (N002, +29.5%)
-#       (d) Unexplained route spikes like Delhi-Jaipur (+35.5%) and Mumbai-Pune creep (+9.2%)
-#   - vs_similar_routes: Mean = +0.36%, Std = 8.98%, 95th percentile = +13.4%
-#   - A peer threshold of 15.0% (>96th percentile) detects routes that diverge
-#     significantly from their peer length cohort in the same week.
+# Recomputed from unrounded route-week percentage changes (sample standard deviation):
+#   - Own-history: n=721, mean=+0.42%, sample std=4.25%, median=+0.22%,
+#     p75=+2.61%, p90=+4.48%, p92=+4.85%, p95=+5.75%.
+#   - Peer: n=728, mean=+0.36%, sample std=8.98%, median=-0.38%,
+#     p95=+13.43%, p96=+14.32%.
+#   - The 5.0% own-history threshold is just above p92; the 15.0% peer
+#     threshold is above p96.
+#   - Observed N001 flood weeks rose +31.5% and +22.8% vs own history;
+#     N002's festival week rose +29.5%. Delhi-Jaipur (+35.5%) and
+#     Mumbai-Pune (+9.2%) are example unexplained spikes in the sample.
 flag_own_history_rising_threshold: 0.0    # Must be strictly above 0% (rising)
-flag_own_history_outlier_threshold: 5.0   # Percentage above own history (92nd percentile)
-flag_peer_outlier_threshold: 15.0         # Percentage above peers (96th percentile)
+flag_own_history_outlier_threshold: 5.0   # Just above the 92nd percentile
+flag_peer_outlier_threshold: 15.0         # Above the 96th percentile
 
 # --- RAG / Note matching ---
 # Embedding model for context notes
 embedding_model: "all-MiniLM-L6-v2"
 # Pin the Hub model snapshot so a future upstream update cannot change retrieval.
 embedding_model_revision: "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
-# Number of candidate notes to retrieve from vector search (search all available notes)
-rag_top_k: 10
+# Number of candidate notes to retrieve; all audited gold notes ranked in the top 3.
+rag_top_k: 5
 # Note applicability is derived from event dates/durations in the note text.
 # Undated durations fall back conservatively to the note's calendar week.
 

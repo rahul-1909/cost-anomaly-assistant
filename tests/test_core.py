@@ -21,7 +21,7 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.loading import load_shipments
+from src.loading import load_config, load_shipments
 from src.metrics import (
     compute_weekly_cost,
     compute_vs_own_history,
@@ -353,6 +353,10 @@ class TestFormatting:
         result = format_vs_similar_routes(-5.2)
         assert result == "-5.2% vs similar-length routes this week"
 
+    def test_rounded_negative_zero_is_rendered_as_zero(self):
+        assert format_vs_own_history(-0.04) == "0.0% vs this route's past average"
+        assert format_vs_similar_routes(-0.04) == "0.0% vs similar-length routes this week"
+
 
 # ============================================================
 # Flagging tests
@@ -391,6 +395,37 @@ class TestFlagging:
     def test_nan_history_no_flag(self):
         """NaN own history should not flag."""
         assert should_flag(float("nan"), 25.0, self._default_config()) is False
+
+    def test_real_config_threshold_boundaries(self):
+        """The configured strict thresholds control own and peer flag paths."""
+        config = load_config(PROJECT_ROOT / "config.yaml")
+        rising = config["flag_own_history_rising_threshold"]
+        own_limit = config["flag_own_history_outlier_threshold"]
+        peer_limit = config["flag_peer_outlier_threshold"]
+
+        assert should_flag(own_limit, peer_limit, config) is False
+        assert should_flag(own_limit + 0.01, peer_limit, config) is True
+        assert should_flag(rising + 1.0, peer_limit, config) is False
+        assert should_flag(rising + 1.0, peer_limit + 0.01, config) is True
+
+
+def test_load_shipments_rejects_multiple_route_types(monkeypatch):
+    shipments = pd.DataFrame({
+        "shipment_id": ["S1", "S2"],
+        "origin": ["A", "A"],
+        "destination": ["B", "B"],
+        "route_type": ["Short", "Medium"],
+        "material": ["Cement", "Cement"],
+        "quantity_tonnes": [10.0, 20.0],
+        "distance_km": [100.0, 100.0],
+        "freight_cost_inr": [5000.0, 10000.0],
+        "shipment_date": ["2025-01-06", "2025-01-07"],
+        "transporter": ["One", "Two"],
+    })
+    monkeypatch.setattr("src.loading.pd.read_csv", lambda _path: shipments.copy())
+
+    with pytest.raises(AssertionError, match="exactly one route_type"):
+        load_shipments(PROJECT_ROOT / "unused.csv")
 
 
 # ============================================================

@@ -58,6 +58,13 @@ def load_shipments(csv_path: Path) -> pd.DataFrame:
     # Add route column: "Origin-Destination"
     df["route"] = df["origin"] + "-" + df["destination"]
 
+    route_type_counts = df.groupby("route")["route_type"].nunique()
+    inconsistent_routes = route_type_counts[route_type_counts != 1]
+    assert inconsistent_routes.empty, (
+        "Each route must have exactly one route_type; inconsistent routes: "
+        f"{inconsistent_routes.to_dict()}"
+    )
+
     # Assign week_of: the Monday of the shipment's Monday-Sunday week
     df["week_of"] = df["shipment_date"] - pd.to_timedelta(
         df["shipment_date"].dt.weekday, unit="D"

@@ -1,13 +1,13 @@
 # FreightTiger Cost Anomaly Assistant
 
-A Python pipeline that computes weekly freight-cost metrics, flags route-week anomalies, and matches flagged rows to contextual notes using semantic retrieval plus deterministic evidence checks.
+A Python pipeline that computes weekly freight-cost metrics, flags route-week anomalies, and matches flagged rows to contextual notes using note retrieval plus deterministic evidence checks.
 
 ## How it works
 
 1. `src/loading.py` validates and loads `shipment_records.csv`, `context_notes.csv`, and `config.yaml`. Shipment dates are assigned to Monday-starting calendar weeks.
 2. `src/metrics.py` aggregates cost and tonne-kilometres for each route-week, then calculates the own-history and same-week peer comparisons.
 3. `src/flagging.py` flags a route-week when its cost is rising versus its own history and exceeds either configured anomaly threshold. Every route-week in the supplied data has 3–5 shipments.
-4. `src/retrieval.py` embeds the context notes with the pinned Sentence Transformers model and searches a FAISS index. Python rules then require route applicability, a matching note-text date/duration interval, and language indicating a cost increase. The rules reject future notes and negative or neutral statements.
+4. `src/retrieval.py` embeds the context notes with the pinned Sentence Transformers model and searches a FAISS index. If the model cannot load, it logs a warning and uses deterministic lexical ranking. Python rules then require route applicability, a matching note-text date/duration interval, and language indicating a cost increase. The rules reject future notes and negative or neutral statements.
 5. `src/explain.py` writes fixed reason templates from the accepted note facts. No LLM is called and no model-generated text can change a verdict or reason.
 
 The pipeline is run from the repository root with `python main.py`. It writes `output.csv` using the contract in `sample_output_format_v2.csv`.
@@ -21,17 +21,21 @@ The pipeline is run from the repository root with `python main.py`. It writes `o
 - **Peer comparison**: the unweighted mean cost for other routes of the same `route_type` in the same week. The route itself is excluded. In this dataset, Short and Long each have two routes, so each has a single peer; Medium has three routes.
 - **Flag rule**: own-history change must be greater than 0%, and either the own-history change must be greater than 5% or the peer change must be greater than 15%. These are strict greater-than comparisons.
 
+Threshold statistics were recomputed from the unrounded route-week percentage changes using sample standard deviation. Own-history: n=721, mean=+0.42%, sample std=4.25%, median=+0.22%, p75=+2.61%, p90=+4.48%, p92=+4.85%, p95=+5.75%. Peer: n=728, mean=+0.36%, sample std=8.98%, median=-0.38%, p95=+13.43%, p96=+14.32%. The 5.0% own-history threshold is just above p92; the 15.0% peer threshold is above p96. Observed N001 flood weeks rose +31.5% and +22.8% versus own history; N002's festival week rose +29.5%. Delhi-Jaipur (+35.5%) and Mumbai-Pune (+9.2%) are example unexplained spikes in the sample.
+
 ## Note matching and reason safety
 
 The selected note must apply to the route (or say `All Routes`), overlap the flagged week according to the dates or duration in its text, and describe a cost increase. A note dated after the flagged week's Sunday is rejected. Explicit date ranges such as `from Feb 24 to Mar 8`, stated durations such as `for about a week`, and phrases such as `this week`, `festival week`, and `this quarter` define the note interval. When no date range or duration is stated, applicability is limited to the calendar week containing the note date. The pipeline does not apply a generic multi-week effect window.
 
 When multiple notes qualify, the pipeline prefers a route-specific note, then the most recent date, then the alphabetically first note ID. Explanations are deterministic templates that cite the selected note. An unexplained row has a blank `matched_note_id`; a rejected note may be described in the reason but is not recorded as matched evidence.
 
+There are only 10 notes in this case-study corpus, so semantic retrieval is a small-corpus candidate-ranking step rather than evidence of broad production search quality. The FAISS rank audit puts all eight gold notes for the justified output rows in positions 1–3, so `rag_top_k` is 5 for this supplied dataset; this small audit says nothing about recall on a larger or new corpus. Deterministic Python rules check retrieved notes for route, time-window, and cost-increase validity; those rules decide the verdict, and fixed Python templates produce the reason. If the embedding model cannot load, the pipeline logs a warning and uses deterministic lexical ranking; the regression test confirms identical output for this dataset. No LLM call can change a verdict or invent a reason.
+
 ## Data and how it was built
 
 The supplied shipment file contains 2,940 records, seven routes, and 728 route-weeks from 2024-01-01 through 2025-12-28. Each route-week has 3–5 shipments. The notes file contains 10 contextual notes, including three cost-increase notes and seven negative controls.
 
-The implementation uses Python, pandas, NumPy, PyYAML, Sentence Transformers, and FAISS. Dependencies are pinned in `requirements.txt`; the embedding model revision is pinned in `config.yaml`. Metric, flag, and reason decisions are implemented in Python. There are no API credentials or external LLM calls required.
+The implementation uses Python, pandas, NumPy, PyYAML, Sentence Transformers, and FAISS, with a deterministic lexical retrieval fallback. Dependencies are pinned in `requirements.txt`; the embedding model revision is pinned in `config.yaml`. Metric, flag, note validation, and reason decisions are implemented in Python. There are no API credentials or external LLM calls required.
 
 ## Verification
 
@@ -47,10 +51,11 @@ Then run the checks from the repository root:
 python -m pytest -q
 python tests/test_independent_baselines.py
 python eval/eval_verdicts.py
+python retrieval_rank_audit.py
 python repro_check.py
 ```
 
-The unit tests cover week assignment, aggregate cost calculations, strict prior-week baselines, peer self-exclusion, thresholds, note route/date/cost-direction rules, output column order and inferred types, and cited-note validity for every justified row. The independent baseline script recomputes selected route-week values from the raw CSV using Python's standard library. The evaluation script reports verdict and note-matching accuracy on its labeled scenarios. The reproducibility script runs the pipeline three times, compares output hashes, writes the report to `repro_check.txt`, and removes temporary `run1.csv`, `run2.csv`, and `run3.csv` files.
+The pytest suite covers week assignment, aggregate cost calculations, strict prior-week baselines, peer self-exclusion, configured threshold boundaries, route-type consistency, note route/date/cost-direction rules, output column order and inferred types, and the hardcoded justified-row oracle. The independent baseline script recomputes five selected route-week metrics from the raw CSV using Python's standard library. Its last-eight-observed baseline equals the eight-calendar-week window for this dataset because no route-weeks are missing. `eval/eval_verdicts.py` is a fixed regression benchmark for verdict and note matching, not an independent label set. The reproducibility script runs the pipeline three times, compares output hashes, writes the report to `repro_check.txt`, and removes temporary `run1.csv`, `run2.csv`, and `run3.csv` files. `retrieval_rank_audit.py` reports each justified row's gold-note position in the FAISS results.
 
 ## Running options
 

@@ -1,10 +1,7 @@
-"""
-eval_verdicts.py -- Evaluation harness for flagged verdicts and note matching.
+"""Fixed regression benchmark for verdicts and note matching.
 
-Uses a hand-labeled benchmark set of expected verdicts and note IDs across
-known ground-truth scenarios (surcharges, flood disruption, fuel price increases,
-lingering post-disruption spikes, and negative controls). Computes precision
-and recall and prints a detailed report.
+Compares output against expected verdicts and note IDs for case-study
+scenarios. It is a regression benchmark, not an independent label set.
 """
 
 import sys
@@ -188,7 +185,7 @@ def print_report(eval_result: dict) -> None:
         return
 
     print("=" * 85)
-    print("FREIGHTTIGER SMART ASSISTANT -- BENCHMARK EVALUATION REPORT")
+    print("FREIGHTTIGER SMART ASSISTANT -- REGRESSION BENCHMARK REPORT")
     print("=" * 85)
 
     results = eval_result["results"]
